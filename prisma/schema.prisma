@@ -1,0 +1,127 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum PickupType {
+  single_coil
+  humbucker
+  p90
+  other
+}
+
+enum LayoutPreset {
+  SSS_5WAY
+  HSS_5WAY
+  HSH_5WAY
+  HH_3WAY
+  HH_5WAY
+  CUSTOM
+}
+
+enum AmpFamily {
+  fender
+  marshall
+  vox
+  boss
+  blackstar
+  orange
+  peavey
+  line6
+  modeling
+  solid_state
+  other
+}
+
+model Guitar {
+  id                  String   @id @default(cuid())
+  brand               String
+  model               String
+  pickupType          String?  // Legacy field - keeping for existing data
+  toneControls        Int?     // Legacy field - keeping for existing data
+  // New detailed fields
+  pickupTypeEnum      PickupType?
+  pickupSwitchOptions Json?    // ["neck", "middle", "bridge", "neck+middle", "bridge+middle"]
+  volumeKnobs         Int?
+  toneKnobs           Int?
+  otherControls       Json?    // {"coil_split": true, "kill_switch": false}
+  // New multi-pickup layout fields
+  layoutPreset        LayoutPreset?
+  pickupLayout        Json?    // array of pickups with objects like { positionLabel: "neck|middle|bridge", type: "single_coil|humbucker|p90", hasCoilSplit: boolean }
+  switchPositions     Json?    // ordered list of positions; each item like { name: "1|2|3|4|5|Up|Middle|Down", activePickups: ["neck","middle"], coilSplitOverrides?: { bridge: true } }
+  controls            Json?    // { volumeKnobs: number, toneKnobs: number, knobAssignment?: { neck?: { volumeIndex: number, toneIndex: number }, bridge?: {...}, middle?: {...} } }
+  // New structured fields for better organization
+  layoutCode          String?  // derived tag like "SSS", "HSS", "HH", "HSH" (computed and stored for search/display)
+  pickups             Json?    // array of objects, one per physical pickup: [{ "id": "neck", "type": "single_coil|humbucker|p90|filtertron|mini_humbucker|lipstick|gold_foil|other", "coilSplitCapable": true|false }]
+  selector            Json?    // structure describing the switch hardware and the effective positions it offers
+  createdAt           DateTime @default(now())
+  gearMatches         GearMatch[]
+}
+
+model Amp {
+  id            String   @id @default(cuid())
+  brand         String
+  model         String
+  ampType       String?  // Legacy field - keeping for existing data
+  hasReverb     Boolean? // Legacy field - keeping for existing data
+  channels      Int?     // Legacy field - keeping for existing data
+  controls      Json?    // Legacy field - keeping for existing data
+  // New detailed fields
+  ampFamily     AmpFamily?
+  isTube        Boolean?
+  knobs         Json?    // {"gain": 10, "bass": 10, "treble": 10, "mids": 10, "reverb": 10}
+  channelsArray Json?    // ["clean", "drive"]
+  otherFeatures Json?    // {"effects_loop": true, "footswitch": true}
+  // New structured fields for exact front-panel controls
+  channelsList  Json?    // ordered list of channel names as labeled on panel/manual
+  controlsList  Json?    // ordered array of front-panel knobs with exact labels
+  buttons       Json?    // ordered array of labeled buttons/toggles/switches
+  voicings      Json?    // ordered names exactly as on product/manual
+  powerSection  Json?    // optional details: { "wattage": <number>, "tubeTypes": ["EL84", ...] }
+  createdAt     DateTime @default(now())
+  gearMatches   GearMatch[]
+}
+
+model Song {
+  id        String   @id @default(cuid())
+  title     String
+  artist    String
+  genre     String?
+  year      Int?
+  tones     Tone[]
+  createdAt DateTime @default(now())
+}
+
+model Tone {
+  id          String      @id @default(cuid())
+  songId      String
+  name        String       // "Clean Intro", "Distorted Solo"
+  description String?
+  difficulty  String       // "beginner", "intermediate", "advanced"
+  baseSettings Json
+  song        Song         @relation(fields: [songId], references: [id])
+  gearMatches GearMatch[]
+  createdAt   DateTime     @default(now())
+}
+
+model GearMatch {
+  id       String   @id @default(cuid())
+  toneId   String
+  guitarId String?
+  ampId    String?
+  settings Json
+  tone     Tone     @relation(fields: [toneId], references: [id])
+  guitar   Guitar?  @relation(fields: [guitarId], references: [id])
+  amp      Amp?     @relation(fields: [ampId], references: [id])
+  createdAt DateTime @default(now())
+}

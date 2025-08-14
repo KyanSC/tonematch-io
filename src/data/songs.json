@@ -1,0 +1,122 @@
+[
+  {
+    "title": "Sweet Child O' Mine",
+    "artist": "Guns N' Roses",
+    "genre": "Hard Rock",
+    "year": 1987
+  },
+  {
+    "title": "Stairway to Heaven",
+    "artist": "Led Zeppelin",
+    "genre": "Rock",
+    "year": 1971
+  },
+  {
+    "title": "Back in Black",
+    "artist": "AC/DC",
+    "genre": "Hard Rock",
+    "year": 1980
+  },
+  {
+    "title": "Smoke on the Water",
+    "artist": "Deep Purple",
+    "genre": "Hard Rock",
+    "year": 1972
+  },
+  {
+    "title": "Purple Haze",
+    "artist": "Jimi Hendrix",
+    "genre": "Rock",
+    "year": 1967
+  },
+  {
+    "title": "Hotel California",
+    "artist": "Eagles",
+    "genre": "Rock",
+    "year": 1976
+  },
+  {
+    "title": "Bohemian Rhapsody",
+    "artist": "Queen",
+    "genre": "Rock",
+    "year": 1975
+  },
+  {
+    "title": "Wonderwall",
+    "artist": "Oasis",
+    "genre": "Britpop",
+    "year": 1995
+  },
+  {
+    "title": "Creep",
+    "artist": "Radiohead",
+    "genre": "Alternative Rock",
+    "year": 1992
+  },
+  {
+    "title": "Enter Sandman",
+    "artist": "Metallica",
+    "genre": "Heavy Metal",
+    "year": 1991
+  },
+  {
+    "title": "Nothing Else Matters",
+    "artist": "Metallica",
+    "genre": "Heavy Metal",
+    "year": 1991
+  },
+  {
+    "title": "Comfortably Numb",
+    "artist": "Pink Floyd",
+    "genre": "Progressive Rock",
+    "year": 1979
+  },
+  {
+    "title": "Layla",
+    "artist": "Derek and the Dominos",
+    "genre": "Rock",
+    "year": 1970
+  },
+  {
+    "title": "Free Bird",
+    "artist": "Lynyrd Skynyrd",
+    "genre": "Southern Rock",
+    "year": 1973
+  },
+  {
+    "title": "Johnny B. Goode",
+    "artist": "Chuck Berry",
+    "genre": "Rock and Roll",
+    "year": 1958
+  },
+  {
+    "title": "Sunshine of Your Love",
+    "artist": "Cream",
+    "genre": "Rock",
+    "year": 1967
+  },
+  {
+    "title": "All Along the Watchtower",
+    "artist": "Jimi Hendrix",
+    "genre": "Rock",
+    "year": 1968
+  },
+  {
+    "title": "Black",
+    "artist": "Pearl Jam",
+    "genre": "Grunge",
+    "year": 1991
+  },
+  {
+    "title": "Everlong",
+    "artist": "Foo Fighters",
+    "genre": "Alternative Rock",
+    "year": 1997
+  },
+  {
+    "title": "Californication",
+    "artist": "Red Hot Chili Peppers",
+    "genre": "Alternative Rock",
+    "year": 1999
+  }
+] 
