@@ -43,6 +43,16 @@ enum AmpFamily {
   other
 }
 
+enum SongSection {
+  INTRO
+  VERSE
+  CHORUS
+  BRIDGE
+  SOLO
+  OUTRO
+  BREAKDOWN
+}
+
 model Guitar {
   id                  String   @id @default(cuid())
   brand               String
@@ -66,6 +76,7 @@ model Guitar {
   selector            Json?    // structure describing the switch hardware and the effective positions it offers
   createdAt           DateTime @default(now())
   gearMatches         GearMatch[]
+  tones               Tone[]
 }
 
 model Amp {
@@ -90,6 +101,7 @@ model Amp {
   powerSection  Json?    // optional details: { "wattage": <number>, "tubeTypes": ["EL84", ...] }
   createdAt     DateTime @default(now())
   gearMatches   GearMatch[]
+  tones         Tone[]
 }
 
 model Song {
@@ -103,15 +115,31 @@ model Song {
 }
 
 model Tone {
-  id          String      @id @default(cuid())
-  songId      String
-  name        String       // "Clean Intro", "Distorted Solo"
-  description String?
-  difficulty  String       // "beginner", "intermediate", "advanced"
-  baseSettings Json
-  song        Song         @relation(fields: [songId], references: [id])
-  gearMatches GearMatch[]
-  createdAt   DateTime     @default(now())
+  id            String         @id @default(cuid())
+  songId        String
+  name          String
+  description   String?
+  difficulty    String         // "beginner", "intermediate", "advanced" - keeping existing field
+  baseSettings  Json           // keeping existing field
+  // New tone authoring fields
+  baseGuitarId  String?
+  baseAmpId     String?
+  baseGuitar    Guitar?        @relation(fields: [baseGuitarId], references: [id])
+  baseAmp       Amp?           @relation(fields: [baseAmpId], references: [id])
+  // Guitar position/voice at authoring time
+  referencePickupPosition String?  // e.g., "5", "2", "Neck", "Middle", "Bridge", "Up/Down"
+  referencePickupVoice    Json?    // { active: [{ pickupId, type, split }], blend?: "series"|"parallel"|"n/a" }
+  // Base amp settings (must match the baseAmp.controlsList names; values 0–10)
+  songSection   SongSection?
+  confidence    Int              @default(70) // 0–100
+  // Provenance & verification
+  sourceLinks   Json?            // string[]
+  verified      Boolean          @default(false)
+  verificationNotes String?
+  // Existing relations
+  song          Song             @relation(fields: [songId], references: [id])
+  gearMatches   GearMatch[]
+  createdAt     DateTime         @default(now())
 }
 
 model GearMatch {

@@ -1,5 +1,6 @@
 export type PickupType = 'single_coil' | 'humbucker' | 'p90' | 'other'
 export type AmpFamily = 'fender' | 'marshall' | 'vox' | 'boss' | 'blackstar' | 'orange' | 'peavey' | 'line6' | 'modeling' | 'solid_state' | 'other'
+export type SongSection = 'INTRO' | 'VERSE' | 'CHORUS' | 'BRIDGE' | 'SOLO' | 'OUTRO' | 'BREAKDOWN'
 
 export interface Guitar {
   id: string
@@ -91,8 +92,37 @@ export interface Tone {
   description?: string
   difficulty: 'beginner' | 'intermediate' | 'advanced'
   baseSettings: ToneSettings
+  // New tone authoring fields
+  baseGuitarId?: string | null
+  baseAmpId?: string | null
+  baseGuitar?: Guitar | null
+  baseAmp?: Amp | null
+  referencePickupPosition?: string | null
+  referencePickupVoice?: any | null
+  songSection?: SongSection | null
+  confidence: number // 0–100
+  sourceLinks?: string[] | null
+  verified: boolean
+  verificationNotes?: string | null
   song: Song
   createdAt: Date
+}
+
+export type ToneDTO = {
+  id: string
+  songId: string
+  name: string
+  description?: string
+  baseGuitarId?: string | null
+  baseAmpId?: string | null
+  referencePickupPosition?: string | null
+  referencePickupVoice?: any | null
+  baseSettings: Record<string, number> // 0–10 integers
+  songSection?: SongSection | null
+  confidence: number // 0–100
+  sourceLinks?: string[] | null
+  verified: boolean
+  verificationNotes?: string | null
 }
 
 export interface GearMatch {
