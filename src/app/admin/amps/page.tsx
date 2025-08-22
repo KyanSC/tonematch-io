@@ -1,30 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Listbox } from '@headlessui/react'
-import { getAmpFamilyLabel } from '@/data/ampPresets'
-import { ampPresets } from '@/data/ampPresets'
-
-interface Amp {
-  id: string
-  brand: string
-  model: string
-  ampType?: string
-  hasReverb?: boolean
-  channels?: number
-  controls?: any
-  ampFamily?: string
-  isTube?: boolean
-  knobs?: any
-  channelsArray?: string[]
-  otherFeatures?: any
-  channelsList?: string[]
-  controlsList?: Array<{ name: string; max: number }>
-  buttons?: Array<{ name: string }> | null
-  voicings?: string[] | null
-  powerSection?: { wattage: number; tubeTypes: string[] } | null
-  createdAt: string
-}
+import { Amp } from '@/lib/types'
 
 export default function AdminAmpsPage() {
   const [amps, setAmps] = useState<Amp[]>([])
@@ -34,13 +11,31 @@ export default function AdminAmpsPage() {
   const [formData, setFormData] = useState({
     brand: '',
     model: '',
-    ampFamily: '',
-    isTube: false,
-    channelsList: [] as string[],
-    controlsList: [] as Array<{ name: string; max: number }>,
-    buttons: [] as Array<{ name: string }>,
-    voicings: [] as string[],
-    powerSection: null as { wattage: number; tubeTypes: string[] } | null
+    // Core capability flags
+    hasGain: false,
+    hasVolume: true,
+    hasBass: true,
+    hasMid: true,
+    hasTreble: true,
+    hasPresence: false,
+    hasReverb: false,
+    hasDriveChannel: false,
+    // Extended capability flags
+    hasBright: false,
+    hasToneCut: false,
+    hasDepth: false,
+    hasResonance: false,
+    hasMasterVolume: false,
+    hasPreampGain: false,
+    hasFXLoopLevel: false,
+    hasContour: false,
+    hasGraphicEQ: false,
+    hasBoost: false,
+    hasPowerScale: false,
+    hasNoiseGate: false,
+    channels: '',
+    controlsExtra: '',
+    notes: ''
   })
 
   useEffect(() => {
@@ -71,13 +66,31 @@ export default function AdminAmpsPage() {
     setFormData({
       brand: amp.brand,
       model: amp.model,
-      ampFamily: amp.ampFamily || '',
-      isTube: amp.isTube || false,
-      channelsList: amp.channelsList || [],
-      controlsList: amp.controlsList || [],
-      buttons: amp.buttons || [],
-      voicings: amp.voicings || [],
-      powerSection: amp.powerSection || null
+      // Core capability flags
+      hasGain: amp.hasGain,
+      hasVolume: amp.hasVolume,
+      hasBass: amp.hasBass,
+      hasMid: amp.hasMid,
+      hasTreble: amp.hasTreble,
+      hasPresence: amp.hasPresence,
+      hasReverb: amp.hasReverb,
+      hasDriveChannel: amp.hasDriveChannel,
+      // Extended capability flags
+      hasBright: amp.hasBright,
+      hasToneCut: amp.hasToneCut,
+      hasDepth: amp.hasDepth,
+      hasResonance: amp.hasResonance,
+      hasMasterVolume: amp.hasMasterVolume,
+      hasPreampGain: amp.hasPreampGain,
+      hasFXLoopLevel: amp.hasFXLoopLevel,
+      hasContour: amp.hasContour,
+      hasGraphicEQ: amp.hasGraphicEQ,
+      hasBoost: amp.hasBoost,
+      hasPowerScale: amp.hasPowerScale,
+      hasNoiseGate: amp.hasNoiseGate,
+      channels: amp.channels || '',
+      controlsExtra: amp.controlsExtra ? JSON.stringify(amp.controlsExtra, null, 2) : '',
+      notes: amp.notes || ''
     })
     setShowForm(true)
   }
@@ -111,12 +124,28 @@ export default function AdminAmpsPage() {
       
       const method = editingAmp ? 'PUT' : 'POST'
       
+      // Parse controlsExtra JSON if provided
+      let controlsExtra = null
+      if (formData.controlsExtra.trim()) {
+        try {
+          controlsExtra = JSON.parse(formData.controlsExtra)
+        } catch (error) {
+          alert('Invalid JSON in Controls Extra field')
+          return
+        }
+      }
+      
+      const submitData = {
+        ...formData,
+        controlsExtra: controlsExtra
+      }
+      
       const response = await fetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(submitData)
       })
       
       if (response.ok) {
@@ -125,125 +154,41 @@ export default function AdminAmpsPage() {
         setFormData({
           brand: '',
           model: '',
-          ampFamily: '',
-          isTube: false,
-          channelsList: [],
-          controlsList: [],
-          buttons: [],
-          voicings: [],
-          powerSection: null
+          // Core capability flags
+          hasGain: false,
+          hasVolume: true,
+          hasBass: true,
+          hasMid: true,
+          hasTreble: true,
+          hasPresence: false,
+          hasReverb: false,
+          hasDriveChannel: false,
+          // Extended capability flags
+          hasBright: false,
+          hasToneCut: false,
+          hasDepth: false,
+          hasResonance: false,
+          hasMasterVolume: false,
+          hasPreampGain: false,
+          hasFXLoopLevel: false,
+          hasContour: false,
+          hasGraphicEQ: false,
+          hasBoost: false,
+          hasPowerScale: false,
+          hasNoiseGate: false,
+          channels: '',
+          controlsExtra: '',
+          notes: ''
         })
         fetchAmps()
       } else {
-        alert('Failed to save amp')
+        const errorData = await response.json()
+        alert(`Failed to save amp: ${errorData.error || 'Unknown error'}`)
       }
     } catch (error) {
       console.error('Error saving amp:', error)
       alert('Error saving amp')
     }
-  }
-
-  const applyPreset = (presetKey: string) => {
-    const preset = ampPresets[presetKey]
-    if (preset) {
-      setFormData({
-        ...formData,
-        ampFamily: preset.ampFamily,
-        isTube: preset.isTube,
-        channelsList: preset.channels,
-        controlsList: preset.controls,
-        buttons: preset.buttons || [],
-        voicings: preset.voicings || [],
-        powerSection: preset.powerSection
-      })
-    }
-  }
-
-  const addChannel = () => {
-    const channelName = prompt('Enter channel name:')
-    if (channelName) {
-      setFormData({
-        ...formData,
-        channelsList: [...formData.channelsList, channelName]
-      })
-    }
-  }
-
-  const removeChannel = (index: number) => {
-    setFormData({
-      ...formData,
-      channelsList: formData.channelsList.filter((_, i) => i !== index)
-    })
-  }
-
-  const addControl = () => {
-    const name = prompt('Enter control name:')
-    if (name) {
-      const max = parseInt(prompt('Enter max value (default 10):') || '10')
-      setFormData({
-        ...formData,
-        controlsList: [...formData.controlsList, { name, max }]
-      })
-    }
-  }
-
-  const removeControl = (index: number) => {
-    setFormData({
-      ...formData,
-      controlsList: formData.controlsList.filter((_, i) => i !== index)
-    })
-  }
-
-  const addButton = () => {
-    const name = prompt('Enter button name:')
-    if (name) {
-      setFormData({
-        ...formData,
-        buttons: [...formData.buttons, { name }]
-      })
-    }
-  }
-
-  const removeButton = (index: number) => {
-    setFormData({
-      ...formData,
-      buttons: formData.buttons.filter((_, i) => i !== index)
-    })
-  }
-
-  const addVoicing = () => {
-    const name = prompt('Enter voicing name:')
-    if (name) {
-      setFormData({
-        ...formData,
-        voicings: [...formData.voicings, name]
-      })
-    }
-  }
-
-  const removeVoicing = (index: number) => {
-    setFormData({
-      ...formData,
-      voicings: formData.voicings.filter((_, i) => i !== index)
-    })
-  }
-
-  const setPowerSection = () => {
-    const wattage = parseInt(prompt('Enter wattage:') || '0')
-    const tubeTypesStr = prompt('Enter tube types (comma-separated):')
-    const tubeTypes = tubeTypesStr ? tubeTypesStr.split(',').map(t => t.trim()) : []
-    
-    setFormData({
-      ...formData,
-      powerSection: { wattage, tubeTypes }
-    })
-  }
-
-  const clearPowerSection = () => {
-    setFormData({
-      ...formData,
-      powerSection: null
-    })
   }
 
   if (loading) {
@@ -260,13 +205,31 @@ export default function AdminAmpsPage() {
             setFormData({
               brand: '',
               model: '',
-              ampFamily: '',
-              isTube: false,
-              channelsList: [],
-              controlsList: [],
-              buttons: [],
-              voicings: [],
-              powerSection: null
+              // Core capability flags
+              hasGain: false,
+              hasVolume: true,
+              hasBass: true,
+              hasMid: true,
+              hasTreble: true,
+              hasPresence: false,
+              hasReverb: false,
+              hasDriveChannel: false,
+              // Extended capability flags
+              hasBright: false,
+              hasToneCut: false,
+              hasDepth: false,
+              hasResonance: false,
+              hasMasterVolume: false,
+              hasPreampGain: false,
+              hasFXLoopLevel: false,
+              hasContour: false,
+              hasGraphicEQ: false,
+              hasBoost: false,
+              hasPowerScale: false,
+              hasNoiseGate: false,
+              channels: '',
+              controlsExtra: '',
+              notes: ''
             })
             setShowForm(true)
           }}
@@ -287,7 +250,7 @@ export default function AdminAmpsPage() {
               {/* Basic Info */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1">Brand</label>
+                  <label className="block text-sm font-medium mb-1">Brand *</label>
                   <input
                     type="text"
                     value={formData.brand}
@@ -297,7 +260,7 @@ export default function AdminAmpsPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Model</label>
+                  <label className="block text-sm font-medium mb-1">Model *</label>
                   <input
                     type="text"
                     value={formData.model}
@@ -308,280 +271,104 @@ export default function AdminAmpsPage() {
                 </div>
               </div>
 
-              {/* Quick Preset */}
-              <div>
-                <label className="block text-sm font-medium mb-1">Quick Preset</label>
-                <Listbox
-                  value=""
-                  onChange={(presetKey) => applyPreset(presetKey)}
-                >
-                  <Listbox.Button className="w-full border rounded px-3 py-2 text-left">
-                    Select a preset to auto-fill fields...
-                  </Listbox.Button>
-                  <Listbox.Options className="absolute z-10 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-auto">
-                    {Object.entries(ampPresets).map(([key, preset]) => (
-                      <Listbox.Option key={key} value={key}>
-                        {({ active }) => (
-                          <div className={`px-3 py-2 cursor-pointer ${active ? 'bg-blue-100' : ''}`}>
-                            {preset.name}
-                          </div>
-                        )}
-                      </Listbox.Option>
-                    ))}
-                  </Listbox.Options>
-                </Listbox>
+              {/* Core Capability Flags */}
+              <div className="border rounded-lg p-4">
+                <h3 className="text-lg font-semibold mb-4">Core Capabilities</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {[
+                    { key: 'hasGain', label: 'Gain' },
+                    { key: 'hasVolume', label: 'Volume' },
+                    { key: 'hasBass', label: 'Bass' },
+                    { key: 'hasMid', label: 'Mid' },
+                    { key: 'hasTreble', label: 'Treble' },
+                    { key: 'hasPresence', label: 'Presence' },
+                    { key: 'hasReverb', label: 'Reverb' },
+                    { key: 'hasDriveChannel', label: 'Drive Channel' }
+                  ].map(({ key, label }) => (
+                    <label key={key} className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={formData[key as keyof typeof formData] as boolean}
+                        onChange={(e) => setFormData({...formData, [key]: e.target.checked})}
+                        className="mr-2"
+                      />
+                      {label}
+                    </label>
+                  ))}
+                </div>
               </div>
 
-              {/* Amp Family & Tube */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Amp Family</label>
-                  <select
-                    value={formData.ampFamily}
-                    onChange={(e) => setFormData({...formData, ampFamily: e.target.value})}
-                    className="w-full border rounded px-3 py-2"
-                  >
-                    <option value="">Select family...</option>
-                    <option value="fender">Fender</option>
-                    <option value="marshall">Marshall</option>
-                    <option value="vox">Vox</option>
-                    <option value="boss">Boss</option>
-                    <option value="blackstar">Blackstar</option>
-                    <option value="orange">Orange</option>
-                    <option value="peavey">Peavey</option>
-                    <option value="line6">Line 6</option>
-                    <option value="modeling">Modeling</option>
-                    <option value="solid_state">Solid State</option>
-                    <option value="other">Other</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Tube Amp</label>
-                  <input
-                    type="checkbox"
-                    checked={formData.isTube}
-                    onChange={(e) => setFormData({...formData, isTube: e.target.checked})}
-                    className="mr-2"
-                  />
-                  <span>Is tube amp</span>
+              {/* Extended Capability Flags */}
+              <div className="border rounded-lg p-4">
+                <h3 className="text-lg font-semibold mb-4">Extended Capabilities</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {[
+                    { key: 'hasBright', label: 'Bright Switch' },
+                    { key: 'hasToneCut', label: 'Tone Cut' },
+                    { key: 'hasDepth', label: 'Depth' },
+                    { key: 'hasResonance', label: 'Resonance' },
+                    { key: 'hasMasterVolume', label: 'Master Volume' },
+                    { key: 'hasPreampGain', label: 'Preamp Gain' },
+                    { key: 'hasFXLoopLevel', label: 'FX Loop Level' },
+                    { key: 'hasContour', label: 'Contour' },
+                    { key: 'hasGraphicEQ', label: 'Graphic EQ' },
+                    { key: 'hasBoost', label: 'Boost' },
+                    { key: 'hasPowerScale', label: 'Power Scale' },
+                    { key: 'hasNoiseGate', label: 'Noise Gate' }
+                  ].map(({ key, label }) => (
+                    <label key={key} className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={formData[key as keyof typeof formData] as boolean}
+                        onChange={(e) => setFormData({...formData, [key]: e.target.checked})}
+                        className="mr-2"
+                      />
+                      {label}
+                    </label>
+                  ))}
                 </div>
               </div>
 
               {/* Channels */}
               <div>
-                <div className="flex justify-between items-center mb-2">
-                  <label className="block text-sm font-medium">Channels</label>
-                  <button
-                    type="button"
-                    onClick={addChannel}
-                    className="text-blue-500 text-sm"
-                  >
-                    + Add Channel
-                  </button>
-                </div>
-                <div className="space-y-2">
-                  {formData.channelsList.map((channel, index) => (
-                    <div key={index} className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        value={channel}
-                        onChange={(e) => {
-                          const newChannels = [...formData.channelsList]
-                          newChannels[index] = e.target.value
-                          setFormData({...formData, channelsList: newChannels})
-                        }}
-                        className="flex-1 border rounded px-3 py-2"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeChannel(index)}
-                        className="text-red-500"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  ))}
-                </div>
+                <label className="block text-sm font-medium mb-1">Channels</label>
+                <input
+                  type="text"
+                  value={formData.channels}
+                  onChange={(e) => setFormData({...formData, channels: e.target.value})}
+                  className="w-full border rounded px-3 py-2"
+                  placeholder="single, two, or multi"
+                />
+                <p className="text-xs text-gray-600 mt-1">
+                  Enter "single", "two", or "multi" to describe channel configuration
+                </p>
               </div>
 
-              {/* Controls */}
+              {/* Controls Extra (JSON) */}
               <div>
-                <div className="flex justify-between items-center mb-2">
-                  <label className="block text-sm font-medium">Controls (Front Panel Knobs)</label>
-                  <button
-                    type="button"
-                    onClick={addControl}
-                    className="text-blue-500 text-sm"
-                  >
-                    + Add Control
-                  </button>
-                </div>
-                <div className="space-y-2">
-                  {formData.controlsList.map((control, index) => (
-                    <div key={index} className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        value={control.name}
-                        onChange={(e) => {
-                          const newControls = [...formData.controlsList]
-                          newControls[index] = { ...control, name: e.target.value }
-                          setFormData({...formData, controlsList: newControls})
-                        }}
-                        placeholder="Control name"
-                        className="flex-1 border rounded px-3 py-2"
-                      />
-                      <input
-                        type="number"
-                        value={control.max}
-                        onChange={(e) => {
-                          const newControls = [...formData.controlsList]
-                          newControls[index] = { ...control, max: parseInt(e.target.value) || 10 }
-                          setFormData({...formData, controlsList: newControls})
-                        }}
-                        placeholder="Max"
-                        className="w-20 border rounded px-3 py-2"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeControl(index)}
-                        className="text-red-500"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  ))}
-                </div>
+                <label className="block text-sm font-medium mb-1">Controls Extra (Optional JSON)</label>
+                <textarea
+                  value={formData.controlsExtra}
+                  onChange={(e) => setFormData({...formData, controlsExtra: e.target.value})}
+                  className="w-full border rounded px-3 py-2"
+                  rows={4}
+                  placeholder='{"uniqueControl": "value", "specialFeature": true}'
+                />
+                <p className="text-xs text-gray-600 mt-1">
+                  Optional JSON for unique controls not covered by standard flags
+                </p>
               </div>
 
-              {/* Buttons */}
+              {/* Notes */}
               <div>
-                <div className="flex justify-between items-center mb-2">
-                  <label className="block text-sm font-medium">Buttons/Switches</label>
-                  <button
-                    type="button"
-                    onClick={addButton}
-                    className="text-blue-500 text-sm"
-                  >
-                    + Add Button
-                  </button>
-                </div>
-                <div className="space-y-2">
-                  {formData.buttons.map((button, index) => (
-                    <div key={index} className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        value={button.name}
-                        onChange={(e) => {
-                          const newButtons = [...formData.buttons]
-                          newButtons[index] = { name: e.target.value }
-                          setFormData({...formData, buttons: newButtons})
-                        }}
-                        className="flex-1 border rounded px-3 py-2"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeButton(index)}
-                        className="text-red-500"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Voicings */}
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <label className="block text-sm font-medium">Voicings</label>
-                  <button
-                    type="button"
-                    onClick={addVoicing}
-                    className="text-blue-500 text-sm"
-                  >
-                    + Add Voicing
-                  </button>
-                </div>
-                <div className="space-y-2">
-                  {formData.voicings.map((voicing, index) => (
-                    <div key={index} className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        value={voicing}
-                        onChange={(e) => {
-                          const newVoicings = [...formData.voicings]
-                          newVoicings[index] = e.target.value
-                          setFormData({...formData, voicings: newVoicings})
-                        }}
-                        className="flex-1 border rounded px-3 py-2"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeVoicing(index)}
-                        className="text-red-500"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Power Section */}
-              <div>
-                <label className="block text-sm font-medium mb-2">Power Section</label>
-                {formData.powerSection ? (
-                  <div className="border rounded p-3">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs text-gray-600">Wattage</label>
-                        <input
-                          type="number"
-                          value={formData.powerSection.wattage}
-                          onChange={(e) => setFormData({
-                            ...formData,
-                            powerSection: {
-                              ...formData.powerSection!,
-                              wattage: parseInt(e.target.value) || 0
-                            }
-                          })}
-                          className="w-full border rounded px-3 py-2"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs text-gray-600">Tube Types</label>
-                        <input
-                          type="text"
-                          value={formData.powerSection.tubeTypes.join(', ')}
-                          onChange={(e) => setFormData({
-                            ...formData,
-                            powerSection: {
-                              ...formData.powerSection!,
-                              tubeTypes: e.target.value.split(',').map(t => t.trim()).filter(t => t)
-                            }
-                          })}
-                          placeholder="EL84, ECC83"
-                          className="w-full border rounded px-3 py-2"
-                        />
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={clearPowerSection}
-                      className="text-red-500 text-sm mt-2"
-                    >
-                      Clear Power Section
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={setPowerSection}
-                    className="text-blue-500 text-sm"
-                  >
-                    + Add Power Section
-                  </button>
-                )}
+                <label className="block text-sm font-medium mb-1">Notes (Optional)</label>
+                <textarea
+                  value={formData.notes}
+                  onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                  className="w-full border rounded px-3 py-2"
+                  rows={3}
+                  placeholder="Additional notes about this amplifier..."
+                />
               </div>
 
               {/* Form Actions */}
@@ -620,10 +407,32 @@ export default function AdminAmpsPage() {
 }
 
 function AmpCard({ amp, onEdit, onDelete }: { amp: Amp; onEdit: () => void; onDelete: () => void }) {
-  const familyLabel = amp.ampFamily ? getAmpFamilyLabel(amp.ampFamily) : ''
-  const tubeLabel = amp.isTube === null ? 'Unknown' : amp.isTube ? 'Tube' : 'Solid State'
-  const channelsCount = amp.channelsList?.length || 0
-  const controlsCount = amp.controlsList?.length || 0
+  // Count capability flags for display
+  const coreCapabilities = [
+    amp.hasGain && 'Gain',
+    amp.hasVolume && 'Volume', 
+    amp.hasBass && 'Bass',
+    amp.hasMid && 'Mid',
+    amp.hasTreble && 'Treble',
+    amp.hasPresence && 'Presence',
+    amp.hasReverb && 'Reverb',
+    amp.hasDriveChannel && 'Drive'
+  ].filter(Boolean)
+
+  const extendedCapabilities = [
+    amp.hasBright && 'Bright',
+    amp.hasToneCut && 'Tone Cut',
+    amp.hasDepth && 'Depth',
+    amp.hasResonance && 'Resonance',
+    amp.hasMasterVolume && 'Master Vol',
+    amp.hasPreampGain && 'Preamp Gain',
+    amp.hasFXLoopLevel && 'FX Loop',
+    amp.hasContour && 'Contour',
+    amp.hasGraphicEQ && 'Graphic EQ',
+    amp.hasBoost && 'Boost',
+    amp.hasPowerScale && 'Power Scale',
+    amp.hasNoiseGate && 'Noise Gate'
+  ].filter(Boolean)
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
@@ -631,20 +440,19 @@ function AmpCard({ amp, onEdit, onDelete }: { amp: Amp; onEdit: () => void; onDe
         <div>
           <h3 className="text-xl font-semibold">{amp.brand} {amp.model}</h3>
           <div className="flex gap-2 mt-1">
-            {familyLabel && (
+            {amp.channels && (
               <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full font-medium">
-                {familyLabel}
+                {amp.channels} channels
               </span>
             )}
             <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full font-medium">
-              {tubeLabel}
+              {coreCapabilities.length} Core
             </span>
-            <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full font-medium">
-              {channelsCount} Channels
-            </span>
-            <span className="px-2 py-1 bg-orange-100 text-orange-800 text-xs rounded-full font-medium">
-              {controlsCount} Controls
-            </span>
+            {extendedCapabilities.length > 0 && (
+              <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full font-medium">
+                {extendedCapabilities.length} Extended
+              </span>
+            )}
           </div>
           <p className="text-gray-500 text-sm mt-1">ID: {amp.id}</p>
         </div>
@@ -666,89 +474,66 @@ function AmpCard({ amp, onEdit, onDelete }: { amp: Amp; onEdit: () => void; onDe
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
         <div>
-          <strong className="text-gray-800">Family:</strong>
-          <p className="text-gray-700">{familyLabel || 'Not set'}</p>
-        </div>
-        <div>
-          <strong className="text-gray-800">Type:</strong>
-          <p className="text-gray-700">{tubeLabel}</p>
-        </div>
-        <div>
           <strong className="text-gray-800">Channels:</strong>
-          <p className="text-gray-700">{amp.channelsList?.join(', ') || 'Not set'}</p>
+          <p className="text-gray-700">{amp.channels || 'Not specified'}</p>
         </div>
         <div>
-          <strong className="text-gray-800">Controls:</strong>
-          <p className="text-gray-700">{controlsCount} configured</p>
+          <strong className="text-gray-800">Core Capabilities:</strong>
+          <p className="text-gray-700">{coreCapabilities.length}</p>
+        </div>
+        <div>
+          <strong className="text-gray-800">Extended:</strong>
+          <p className="text-gray-700">{extendedCapabilities.length}</p>
+        </div>
+        <div>
+          <strong className="text-gray-800">Drive Channel:</strong>
+          <p className="text-gray-700">{amp.hasDriveChannel ? 'Yes' : 'No'}</p>
         </div>
       </div>
 
-      {amp.controlsList && amp.controlsList.length > 0 && (
-        <div className="mt-4">
-          <strong className="text-gray-800 text-sm">Controls:</strong>
-          <div className="flex flex-wrap gap-2 mt-1">
-            {amp.controlsList.map((control, index) => (
-              <span key={index} className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">
-                {control.name} (0-{control.max})
+      {/* Core Capabilities */}
+      {coreCapabilities.length > 0 && (
+        <div className="mt-4 p-3 bg-blue-50 rounded">
+          <p className="text-xs text-gray-600 mb-2">Core Capabilities ({coreCapabilities.length}):</p>
+          <div className="flex flex-wrap gap-1">
+            {coreCapabilities.map((capability, index) => (
+              <span key={index} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
+                {capability}
               </span>
             ))}
           </div>
         </div>
       )}
 
-      {amp.buttons && amp.buttons.length > 0 && (
-        <div className="mt-4">
-          <strong className="text-gray-800 text-sm">Buttons:</strong>
-          <div className="flex flex-wrap gap-2 mt-1">
-            {amp.buttons.map((button, index) => (
-              <span key={index} className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded">
-                {button.name}
+      {/* Extended Capabilities */}
+      {extendedCapabilities.length > 0 && (
+        <div className="mt-4 p-3 bg-purple-50 rounded">
+          <p className="text-xs text-gray-600 mb-2">Extended Capabilities ({extendedCapabilities.length}):</p>
+          <div className="flex flex-wrap gap-1">
+            {extendedCapabilities.map((capability, index) => (
+              <span key={index} className="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded">
+                {capability}
               </span>
             ))}
           </div>
         </div>
       )}
 
-      {amp.voicings && amp.voicings.length > 0 && (
-        <div className="mt-4">
-          <strong className="text-gray-800 text-sm">Voicings:</strong>
-          <div className="flex flex-wrap gap-2 mt-1">
-            {amp.voicings.map((voicing, index) => (
-              <span key={index} className="px-2 py-1 bg-indigo-100 text-indigo-800 text-xs rounded">
-                {voicing}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {amp.powerSection && (
-        <div className="mt-4">
-          <strong className="text-gray-800 text-sm">Power:</strong>
-          <p className="text-gray-700 text-sm">
-            {amp.powerSection.wattage}W ({amp.powerSection.tubeTypes.join(', ')})
-          </p>
-        </div>
-      )}
-
-      {/* Legacy fields for backward compatibility */}
-      {(amp.ampType || amp.hasReverb !== undefined || amp.channels !== undefined) && (
+      {/* Controls Extra */}
+      {amp.controlsExtra && (
         <div className="mt-4 p-3 bg-gray-50 rounded">
-          <p className="text-xs text-gray-600 mb-2">Legacy fields:</p>
-          <div className="grid grid-cols-3 gap-4 text-sm">
-            <div>
-              <strong className="text-gray-800">Amp Type:</strong>
-              <p className="text-gray-700">{amp.ampType || 'Not set'}</p>
-            </div>
-            <div>
-              <strong className="text-gray-800">Has Reverb:</strong>
-              <p className="text-gray-700">{amp.hasReverb === undefined ? 'Not set' : amp.hasReverb ? 'Yes' : 'No'}</p>
-            </div>
-            <div>
-              <strong className="text-gray-800">Channels:</strong>
-              <p className="text-gray-700">{amp.channels || 'Not set'}</p>
-            </div>
-          </div>
+          <p className="text-xs text-gray-600 mb-1">Extra Controls:</p>
+          <pre className="text-xs text-gray-700 whitespace-pre-wrap">
+            {JSON.stringify(amp.controlsExtra, null, 2)}
+          </pre>
+        </div>
+      )}
+
+      {/* Notes */}
+      {amp.notes && (
+        <div className="mt-4 p-3 bg-yellow-50 rounded">
+          <p className="text-xs text-gray-600 mb-1">Notes:</p>
+          <p className="text-sm text-gray-700">{amp.notes}</p>
         </div>
       )}
     </div>

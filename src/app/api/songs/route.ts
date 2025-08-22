@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     const songs = await getSongs(search, filters, limit)
     
     return NextResponse.json(songs)
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching songs:', error)
     return NextResponse.json(
       { error: 'Failed to fetch songs' },

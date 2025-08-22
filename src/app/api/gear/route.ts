@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
       const [guitars, amps] = await Promise.all([getGuitars(), getAmps()])
       return NextResponse.json({ guitars, amps })
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching gear:', error)
     console.error('Error details:', {
       message: error.message,

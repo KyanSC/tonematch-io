@@ -1,177 +1,245 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '@/lib/database'
 
-const prisma = new PrismaClient()
+// Helper function to validate and prepare tone data
+function validateToneData(formData: any) {
+  const {
+    songId,
+    name,
+    slug,
+    guitarist,
+    role,
+    section,
+    confidence,
+    // Required Archetypes (new)
+    sourceGuitarArchetypeId,
+    sourceAmpArchetypeId,
+    // Source Gear fields
+    instrument,
+    sourceGuitar,
+    sourcePickup,
+    sourcePickupType,
+    // Original Guitar Settings
+    sourcePickupSelector,
+    sourceGuitarVolume,
+    sourceGuitarTone,
+    sourceGuitarVolumeNeck,
+    sourceGuitarVolumeBridge,
+    sourceGuitarToneNeck,
+    sourceGuitarToneBridge,
+    sourceCoilSplit,
+    sourceOtherSwitches,
+    sourceAmp,
+    sourceAmpChannel,
+    sourceAmpChannelStructured,
+    sourceAmpChannelOther,
+    sourcePedals,
+    sourceNotes,
+    // Original Amp Settings (Recorded)
+    sourceAmpMasterVolume,
+    sourceAmpChannelVolume,
+    sourceAmpExtras,
+    intent,
+    notes
+  } = formData
+
+  // Validation
+  if (!songId || !name || !slug) {
+    throw new Error('Song ID, name, and slug are required')
+  }
+
+  // Validate required archetypes
+  if (!sourceGuitarArchetypeId) {
+    throw new Error('Guitar archetype is required')
+  }
+  if (!sourceAmpArchetypeId) {
+    throw new Error('Amp archetype is required')
+  }
+
+  // Block use of "Unspecified" archetypes for new tones
+  if (sourceGuitarArchetypeId === 'unspecified-guitar-id' || sourceGuitarArchetypeId.includes('Unspecified')) {
+    throw new Error('Please choose a specific guitar archetype (not Unspecified). Use "Add New" if needed.')
+  }
+  if (sourceAmpArchetypeId === 'unspecified-amp-id' || sourceAmpArchetypeId.includes('Unspecified')) {
+    throw new Error('Please choose a specific amp archetype (not Unspecified). Use "Add New" if needed.')
+  }
+
+  // Validate role
+  const validRoles = ['CLEAN', 'RHYTHM', 'CRUNCH', 'LEAD', 'SOLO']
+  if (role && !validRoles.includes(role)) {
+    throw new Error('Role must be one of: CLEAN, RHYTHM, CRUNCH, LEAD, SOLO')
+  }
+
+  // Validate confidence
+  const validConfidences = ['HIGH', 'MEDIUM', 'LOW']
+  if (confidence && !validConfidences.includes(confidence)) {
+    throw new Error('Confidence must be one of: HIGH, MEDIUM, LOW')
+  }
+
+  // Validate instrument
+  const validInstruments = ['GUITAR', 'BASS']
+  if (instrument && !validInstruments.includes(instrument)) {
+    throw new Error('Instrument must be one of: GUITAR, BASS')
+  }
+
+  // Validate sourcePickupType
+  const validPickupTypes = ['SINGLE_COIL', 'HUMBUCKER', 'P90', 'OTHER']
+  if (sourcePickupType && !validPickupTypes.includes(sourcePickupType)) {
+    throw new Error('Source pickup type must be one of: SINGLE_COIL, HUMBUCKER, P90, OTHER')
+  }
+
+  // Validate structured amp channel
+  const validAmpChannels = ['CLEAN', 'CRUNCH', 'LEAD_HIGH_GAIN', 'ACOUSTIC_JC', 'OTHER']
+  if (sourceAmpChannelStructured && !validAmpChannels.includes(sourceAmpChannelStructured)) {
+    throw new Error('Amp channel must be one of: CLEAN, CRUNCH, LEAD_HIGH_GAIN, ACOUSTIC_JC, OTHER')
+  }
+
+  // Validate amp channel other is provided when OTHER is selected
+  if (sourceAmpChannelStructured === 'OTHER' && !sourceAmpChannelOther?.trim()) {
+    throw new Error('Amp channel "Other" requires a description')
+  }
+
+  // Validate guitar volume and tone (single or per-pickup)
+  if (sourceGuitarVolume !== undefined && (sourceGuitarVolume < 0 || sourceGuitarVolume > 10)) {
+    throw new Error('Guitar volume must be between 0 and 10')
+  }
+  if (sourceGuitarTone !== undefined && (sourceGuitarTone < 0 || sourceGuitarTone > 10)) {
+    throw new Error('Guitar tone must be between 0 and 10')
+  }
+  if (sourceGuitarVolumeNeck !== undefined && (sourceGuitarVolumeNeck < 0 || sourceGuitarVolumeNeck > 10)) {
+    throw new Error('Neck volume must be between 0 and 10')
+  }
+  if (sourceGuitarVolumeBridge !== undefined && (sourceGuitarVolumeBridge < 0 || sourceGuitarVolumeBridge > 10)) {
+    throw new Error('Bridge volume must be between 0 and 10')
+  }
+  if (sourceGuitarToneNeck !== undefined && (sourceGuitarToneNeck < 0 || sourceGuitarToneNeck > 10)) {
+    throw new Error('Neck tone must be between 0 and 10')
+  }
+  if (sourceGuitarToneBridge !== undefined && (sourceGuitarToneBridge < 0 || sourceGuitarToneBridge > 10)) {
+    throw new Error('Bridge tone must be between 0 and 10')
+  }
+
+  // Validate amp volume settings
+  if (sourceAmpMasterVolume !== undefined && (sourceAmpMasterVolume < 0 || sourceAmpMasterVolume > 10)) {
+    throw new Error('Amp master volume must be between 0 and 10')
+  }
+  if (sourceAmpChannelVolume !== undefined && (sourceAmpChannelVolume < 0 || sourceAmpChannelVolume > 10)) {
+    throw new Error('Amp channel volume must be between 0 and 10')
+  }
+
+  // Validate intent is valid JSON
+  if (!intent) {
+    throw new Error('Intent is required')
+  }
+
+  let parsedIntent
+  try {
+    parsedIntent = typeof intent === 'string' ? JSON.parse(intent) : intent
+  } catch (error) {
+    throw new Error('Intent must be valid JSON')
+  }
+
+  return {
+    songId,
+    name: name.trim(),
+    slug: slug.trim(),
+    guitarist: guitarist?.trim() || null,
+    role: role || null,
+    section: section?.trim() || null,
+    confidence: confidence || null,
+    // Required Archetypes (new)
+    sourceGuitarArchetypeId,
+    sourceAmpArchetypeId,
+    // Source Gear fields
+    instrument: instrument || 'GUITAR',
+    sourceGuitar: sourceGuitar?.trim() || null,
+    sourcePickup: sourcePickup?.trim() || null,
+    sourcePickupType: sourcePickupType || null,
+    // Original Guitar Settings
+    sourcePickupSelector: sourcePickupSelector?.trim() || null,
+    sourceGuitarVolume: sourceGuitarVolume || null,
+    sourceGuitarTone: sourceGuitarTone || null,
+    sourceGuitarVolumeNeck: sourceGuitarVolumeNeck || null,
+    sourceGuitarVolumeBridge: sourceGuitarVolumeBridge || null,
+    sourceGuitarToneNeck: sourceGuitarToneNeck || null,
+    sourceGuitarToneBridge: sourceGuitarToneBridge || null,
+    sourceCoilSplit: sourceCoilSplit?.trim() || null,
+    sourceOtherSwitches: sourceOtherSwitches?.trim() || null,
+    sourceAmp: sourceAmp?.trim() || null,
+    sourceAmpChannel: sourceAmpChannel?.trim() || null,
+    sourceAmpChannelStructured: sourceAmpChannelStructured || null,
+    sourceAmpChannelOther: sourceAmpChannelOther?.trim() || null,
+    sourcePedals: sourcePedals?.trim() || null,
+    sourceNotes: sourceNotes?.trim() || null,
+    // Original Amp Settings (Recorded)
+    sourceAmpMasterVolume: sourceAmpMasterVolume || null,
+    sourceAmpChannelVolume: sourceAmpChannelVolume || null,
+    sourceAmpExtras: sourceAmpExtras || null,
+    intent: parsedIntent,
+    notes: notes?.trim() || null
+  }
+}
 
 // POST /api/admin/tones - Create a new tone
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const {
-      songId,
-      name,
-      description,
-      baseGuitarId,
-      baseAmpId,
-      referencePickupPosition,
-      referencePickupVoice,
-      baseSettings,
-      songSection,
-      confidence,
-      sourceLinks,
-      verified,
-      verificationNotes
-    } = body
 
-    // Validation
-    if (!name || name.trim() === '') {
-      return NextResponse.json({ error: 'Name is required' }, { status: 400 })
-    }
+    // Validate and prepare tone data
+    const toneData = validateToneData(body)
 
-    if (!songId) {
-      return NextResponse.json({ error: 'Song ID is required' }, { status: 400 })
-    }
-
-    // Verify song exists
-    const song = await prisma.song.findUnique({
-      where: { id: songId }
+    // Check if slug is unique for this song
+    const existingTone = await prisma.tone.findFirst({
+      where: {
+        songId: toneData.songId,
+        slug: toneData.slug
+      }
     })
-    if (!song) {
-      return NextResponse.json({ error: 'Song not found' }, { status: 404 })
-    }
 
-    // Validate baseSettings if baseAmpId is provided
-    if (baseAmpId && baseSettings) {
-      const amp = await prisma.amp.findUnique({
-        where: { id: baseAmpId },
-        select: { controlsList: true }
-      })
-      
-      if (!amp) {
-        return NextResponse.json({ error: 'Base amp not found' }, { status: 404 })
-      }
-
-      if (amp.controlsList) {
-        const expectedControls = (amp.controlsList as any[]).map(control => control.name)
-        const providedControls = Object.keys(baseSettings)
-        
-        // Check if all provided controls exist in amp's controlsList
-        for (const control of providedControls) {
-          if (!expectedControls.includes(control)) {
-            return NextResponse.json({ 
-              error: `Invalid control '${control}'. Expected controls: ${expectedControls.join(', ')}` 
-            }, { status: 400 })
-          }
-        }
-
-        // Validate all values are integers 0-10
-        for (const [control, value] of Object.entries(baseSettings)) {
-          const numValue = Number(value)
-          if (!Number.isInteger(numValue) || numValue < 0 || numValue > 10) {
-            return NextResponse.json({ 
-              error: `Control '${control}' value must be an integer between 0 and 10` 
-            }, { status: 400 })
-          }
-        }
-      }
-    }
-
-    // Validate sourceLinks
-    if (sourceLinks) {
-      if (!Array.isArray(sourceLinks) || sourceLinks.length === 0) {
-        return NextResponse.json({ error: 'At least one source link is required' }, { status: 400 })
-      }
-      
-      for (const link of sourceLinks) {
-        if (typeof link !== 'string' || link.trim() === '') {
-          return NextResponse.json({ error: 'All source links must be non-empty strings' }, { status: 400 })
-        }
-      }
-    }
-
-    // Auto-derive referencePickupVoice if baseGuitarId and referencePickupPosition are provided
-    let derivedReferencePickupVoice = referencePickupVoice
-    if (baseGuitarId && referencePickupPosition && !referencePickupVoice) {
-      const guitar = await prisma.guitar.findUnique({
-        where: { id: baseGuitarId },
-        select: { selector: true }
-      })
-      
-      if (guitar?.selector) {
-        const selector = guitar.selector as any
-        const position = selector.positions?.find((p: any) => 
-          p.name === referencePickupPosition || p.label === referencePickupPosition
-        )
-        
-        if (position) {
-          derivedReferencePickupVoice = {
-            active: position.active,
-            blend: position.blend || 'n/a'
-          }
-        }
-      }
+    if (existingTone) {
+      return NextResponse.json(
+        { error: 'A tone with this slug already exists for this song' },
+        { status: 400 }
+      )
     }
 
     const tone = await prisma.tone.create({
-      data: {
-        songId,
-        name: name.trim(),
-        description: description?.trim() || null,
-        baseGuitarId: baseGuitarId || null,
-        baseAmpId: baseAmpId || null,
-        referencePickupPosition: referencePickupPosition || null,
-        referencePickupVoice: derivedReferencePickupVoice,
-        baseSettings,
-        songSection: songSection || null,
-        confidence: confidence || 70,
-        sourceLinks: sourceLinks || null,
-        verified: verified || false,
-        verificationNotes: verificationNotes?.trim() || null,
-        difficulty: 'intermediate' // Default value for existing field
-      },
+      data: toneData,
       include: {
-        baseGuitar: {
-          select: { id: true, brand: true, model: true }
-        },
-        baseAmp: {
-          select: { id: true, brand: true, model: true }
-        }
+        sourceGuitarArchetype: true,
+        sourceAmpArchetype: true,
+        song: true
       }
     })
 
     return NextResponse.json(tone, { status: 201 })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating tone:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json(
+      { error: error.message || 'Failed to create tone' },
+      { status: 400 }
+    )
   }
 }
 
-// GET /api/admin/tones?songId=... - List tones for a song
+// GET /api/admin/tones - List all tones
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url)
-    const songId = searchParams.get('songId')
-
-    if (!songId) {
-      return NextResponse.json({ error: 'Song ID is required' }, { status: 400 })
-    }
-
     const tones = await prisma.tone.findMany({
-      where: { songId },
+      orderBy: { createdAt: 'desc' },
       include: {
-        baseGuitar: {
-          select: { id: true, brand: true, model: true }
-        },
-        baseAmp: {
-          select: { id: true, brand: true, model: true }
-        }
-      },
-      orderBy: { createdAt: 'desc' }
+        sourceGuitarArchetype: true,
+        sourceAmpArchetype: true,
+        song: true
+      }
     })
 
     return NextResponse.json(tones)
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching tones:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json(
+      { error: error.message || 'Failed to fetch tones' },
+      { status: 500 }
+    )
   }
 } 

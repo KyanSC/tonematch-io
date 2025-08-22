@@ -43,13 +43,7 @@ export async function getSongs(search?: string, filters?: { genre?: string; deca
   return await prisma.song.findMany({
     where,
     include: {
-      tones: {
-        include: {
-          _count: {
-            select: { gearMatches: true }
-          }
-        }
-      }
+      tones: true
     },
     orderBy: { title: 'asc' },
     ...(limit && { take: limit })
@@ -60,36 +54,9 @@ export async function getSongWithTones(songId: string) {
   return await prisma.song.findUnique({
     where: { id: songId },
     include: {
-      tones: {
-        include: {
-          gearMatches: {
-            include: {
-              guitar: true,
-              amp: true
-            }
-          }
-        }
-      }
+      tones: true
     }
   })
 }
 
-export async function getGearMatchesForTone(toneId: string, guitarId?: string, ampId?: string) {
-  // Always get all gear matches for the tone
-  return await prisma.gearMatch.findMany({
-    where: { toneId },
-    include: {
-      guitar: true,
-      amp: true,
-      tone: {
-        include: {
-          song: true
-        }
-      }
-    },
-    orderBy: [
-      { guitar: { brand: 'asc' } },
-      { amp: { brand: 'asc' } }
-    ]
-  })
-} 
+// Note: GearMatch functionality removed as it's not part of current schema 

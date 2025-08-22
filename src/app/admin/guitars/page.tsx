@@ -1,8 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Guitar, PickupType } from '@/lib/types'
-import { guitarPresets, computeLayoutCode, getSelectorTypeLabel, GuitarPreset } from '@/data/guitarPresets'
+import { Guitar } from '@/lib/types'
 
 export default function AdminGuitarsPage() {
   const [guitars, setGuitars] = useState<Guitar[]>([])
@@ -124,23 +123,18 @@ export default function AdminGuitarsPage() {
 }
 
 function GuitarCard({ guitar, onEdit, onDelete }: { guitar: Guitar; onEdit: () => void; onDelete: () => void }) {
-  const layoutCode = guitar.layoutCode || (guitar.pickups ? computeLayoutCode(guitar.pickups) : '')
-  const selectorType = guitar.selector?.type ? getSelectorTypeLabel(guitar.selector.type) : ''
-
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
       <div className="flex justify-between items-start mb-4">
         <div>
           <h3 className="text-xl font-semibold">{guitar.brand} {guitar.model}</h3>
           <div className="flex gap-2 mt-1">
-            {layoutCode && (
-              <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full font-medium">
-                {layoutCode}
-              </span>
-            )}
-            {selectorType && (
+            <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full font-medium">
+              {guitar.pickupLayout}
+            </span>
+            {(guitar.hasCoilSplitNeck || guitar.hasCoilSplitBridge) && (
               <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full font-medium">
-                {selectorType}
+                Coil Split
               </span>
             )}
           </div>
@@ -164,41 +158,47 @@ function GuitarCard({ guitar, onEdit, onDelete }: { guitar: Guitar; onEdit: () =
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
         <div>
-          <strong className="text-gray-800">Layout Code:</strong>
-          <p className="text-gray-700">{layoutCode || 'Not set'}</p>
+          <strong className="text-gray-800">Pickup Layout:</strong>
+          <p className="text-gray-700">{guitar.pickupLayout}</p>
         </div>
         <div>
-          <strong className="text-gray-800">Pickups:</strong>
-          <p className="text-gray-700">{guitar.pickups?.length || 0} configured</p>
+          <strong className="text-gray-800">Positions:</strong>
+          <p className="text-gray-700">{guitar.positions?.join(', ') || 'Not set'}</p>
         </div>
         <div>
-          <strong className="text-gray-800">Selector:</strong>
-          <p className="text-gray-700">{selectorType || 'Not set'}</p>
+          <strong className="text-gray-800">Volume Knobs:</strong>
+          <p className="text-gray-700">{guitar.volumeKnobs}</p>
         </div>
         <div>
-          <strong className="text-gray-800">Controls:</strong>
-          <p className="text-gray-700">{guitar.controls ? 'Configured' : 'Not set'}</p>
+          <strong className="text-gray-800">Tone Knobs:</strong>
+          <p className="text-gray-700">{guitar.toneKnobs}</p>
         </div>
       </div>
 
-      {/* Legacy fields for backward compatibility */}
-      {(guitar.pickupTypeEnum || guitar.volumeKnobs || guitar.toneKnobs) && (
-        <div className="mt-4 p-3 bg-gray-50 rounded">
-          <p className="text-xs text-gray-600 mb-2">Legacy fields:</p>
-          <div className="grid grid-cols-3 gap-4 text-sm">
-            <div>
-              <strong className="text-gray-800">Pickup Type:</strong>
-              <p className="text-gray-700">{guitar.pickupTypeEnum || guitar.pickupType || 'Not set'}</p>
-            </div>
-            <div>
-              <strong className="text-gray-800">Volume Knobs:</strong>
-              <p className="text-gray-700">{guitar.volumeKnobs || 'Not set'}</p>
-            </div>
-            <div>
-              <strong className="text-gray-800">Tone Knobs:</strong>
-              <p className="text-gray-700">{guitar.toneKnobs || 'Not set'}</p>
-            </div>
+      {/* Coil Split Section */}
+      {(guitar.hasCoilSplitNeck || guitar.hasCoilSplitBridge) && (
+        <div className="mt-4 p-3 bg-green-50 rounded">
+          <p className="text-xs text-gray-600 mb-2">Coil Split Capabilities:</p>
+          <div className="flex flex-wrap gap-1">
+            {guitar.hasCoilSplitNeck && (
+              <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">
+                Neck
+              </span>
+            )}
+            {guitar.hasCoilSplitBridge && (
+              <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">
+                Bridge
+              </span>
+            )}
           </div>
+        </div>
+      )}
+
+      {/* Notes */}
+      {guitar.notes && (
+        <div className="mt-4 p-3 bg-yellow-50 rounded">
+          <p className="text-xs text-gray-600 mb-1">Notes:</p>
+          <p className="text-sm text-gray-700">{guitar.notes}</p>
         </div>
       )}
     </div>
@@ -209,63 +209,31 @@ function GuitarForm({ guitar, onSave, onCancel }: { guitar: Guitar | null; onSav
   const [formData, setFormData] = useState({
     brand: guitar?.brand || '',
     model: guitar?.model || '',
-    pickups: guitar?.pickups || [],
-    selector: guitar?.selector || null,
-    controls: guitar?.controls || null,
-    layoutCode: guitar?.layoutCode || ''
+    pickupLayout: guitar?.pickupLayout || '',
+    positions: guitar?.positions || [],
+    volumeKnobs: guitar?.volumeKnobs || 0,
+    toneKnobs: guitar?.toneKnobs || 0,
+    hasCoilSplitNeck: guitar?.hasCoilSplitNeck || false,
+    hasCoilSplitBridge: guitar?.hasCoilSplitBridge || false,
+    knobMapping: guitar?.knobMapping || {},
+    notes: guitar?.notes || ''
   })
 
-  const [selectedPreset, setSelectedPreset] = useState('')
-  const [pickupId, setPickupId] = useState('')
-  const [pickupType, setPickupType] = useState('single_coil')
-  const [coilSplitCapable, setCoilSplitCapable] = useState(false)
+  const [knobMappingInputs, setKnobMappingInputs] = useState({
+    tone1: '',
+    tone2: '',
+    volume1: '',
+    volume2: ''
+  })
 
-  const pickupTypes = [
-    'single_coil', 'humbucker', 'p90', 'filtertron', 
-    'mini_humbucker', 'lipstick', 'gold_foil', 'other'
-  ]
+  const availablePositions = ['NECK', 'NECK_MIDDLE', 'MIDDLE', 'MIDDLE_BRIDGE', 'BRIDGE', 'NECK_BRIDGE']
 
-  const selectorTypes = [
-    '3_way_toggle', '5_way_blade', '4_way_blade', 
-    'super_switch', 'rotary', 'other'
-  ]
-
-  const handlePresetChange = (presetKey: string) => {
-    if (presetKey && guitarPresets[presetKey]) {
-      const preset = guitarPresets[presetKey]
-      setFormData(prev => ({
-        ...prev,
-        pickups: preset.pickups,
-        selector: preset.selector,
-        controls: preset.controls,
-        layoutCode: computeLayoutCode(preset.pickups)
-      }))
-    }
-  }
-
-  const addPickup = () => {
-    if (pickupId && !formData.pickups.find(p => p.id === pickupId)) {
-      const newPickup = {
-        id: pickupId,
-        type: pickupType,
-        coilSplitCapable
-      }
-      setFormData(prev => ({
-        ...prev,
-        pickups: [...prev.pickups, newPickup],
-        layoutCode: computeLayoutCode([...prev.pickups, newPickup])
-      }))
-      setPickupId('')
-      setPickupType('single_coil')
-      setCoilSplitCapable(false)
-    }
-  }
-
-  const removePickup = (id: string) => {
+  const handlePositionToggle = (position: string) => {
     setFormData(prev => ({
       ...prev,
-      pickups: prev.pickups.filter(p => p.id !== id),
-      layoutCode: computeLayoutCode(prev.pickups.filter(p => p.id !== id))
+      positions: prev.positions.includes(position)
+        ? prev.positions.filter(p => p !== position)
+        : [...prev.positions, position]
     }))
   }
 
@@ -277,9 +245,17 @@ function GuitarForm({ guitar, onSave, onCancel }: { guitar: Guitar | null; onSav
       return
     }
 
+    // Convert knob mapping inputs to JSON
+    const knobMapping: any = {}
+    Object.entries(knobMappingInputs).forEach(([key, value]) => {
+      if (value.trim()) {
+        knobMapping[key] = value.trim()
+      }
+    })
+
     onSave({
       ...formData,
-      layoutCode: computeLayoutCode(formData.pickups)
+      knobMapping: Object.keys(knobMapping).length > 0 ? knobMapping : null
     })
   }
 
@@ -315,198 +291,160 @@ function GuitarForm({ guitar, onSave, onCancel }: { guitar: Guitar | null; onSav
           </div>
         </div>
 
-        {/* Layout Code (read-only) */}
+        {/* Pickup Layout */}
         <div>
-          <label className="block text-sm font-medium mb-2">Layout Code (auto-derived)</label>
+          <label className="block text-sm font-medium mb-2">Pickup Layout *</label>
           <input
             type="text"
-            value={formData.layoutCode}
-            className="w-full p-2 border rounded-lg bg-gray-50"
-            readOnly
+            value={formData.pickupLayout}
+            onChange={(e) => setFormData(prev => ({ ...prev, pickupLayout: e.target.value }))}
+            className="w-full p-2 border rounded-lg"
+            placeholder="e.g., HH, SSS, HSS, P90_P90"
+            required
           />
           <p className="text-xs text-gray-600 mt-1">
-            Automatically computed from pickup configuration
+            Standard layout codes: HH, SSS, HSS, P90_P90, HSH, etc.
           </p>
         </div>
 
-        {/* Preset Selector */}
+        {/* Positions */}
         <div>
-          <label className="block text-sm font-medium mb-2">Quick Preset</label>
-          <select
-            value={selectedPreset}
-            onChange={(e) => {
-              setSelectedPreset(e.target.value)
-              handlePresetChange(e.target.value)
-            }}
-            className="w-full p-2 border rounded-lg"
-          >
-            <option value="">Select a preset to quickly configure...</option>
-            {Object.entries(guitarPresets).map(([key, preset]) => (
-              <option key={key} value={key}>{preset.name}</option>
+          <label className="block text-sm font-medium mb-2">Pickup Positions *</label>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+            {availablePositions.map((position) => (
+              <button
+                key={position}
+                type="button"
+                onClick={() => handlePositionToggle(position)}
+                className={`p-2 border rounded-lg text-sm ${
+                  formData.positions.includes(position)
+                    ? 'bg-blue-100 border-blue-500 text-blue-800'
+                    : 'bg-gray-50 border-gray-300 text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                {position}
+              </button>
             ))}
-          </select>
+          </div>
           <p className="text-xs text-gray-600 mt-1">
-            Choose a preset to automatically fill pickups, selector, and controls
+            Select the pickup positions this guitar supports
           </p>
         </div>
 
-        {/* Pickups Section */}
-        <div className="border rounded-lg p-4">
-          <h3 className="text-lg font-semibold mb-4">Pickups</h3>
-          <p className="text-sm text-gray-600 mb-4">
-            Define the physical pickups installed in this guitar
-          </p>
-          
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+        {/* Knob Counts */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm font-medium mb-2">Volume Knobs</label>
             <input
-              type="text"
-              placeholder="Pickup ID (neck/middle/bridge)"
-              value={pickupId}
-              onChange={(e) => setPickupId(e.target.value)}
-              className="p-2 border rounded-lg"
+              type="number"
+              min="0"
+              max="4"
+              value={formData.volumeKnobs}
+              onChange={(e) => setFormData(prev => ({ ...prev, volumeKnobs: parseInt(e.target.value) || 0 }))}
+              className="w-full p-2 border rounded-lg"
             />
-            <select
-              value={pickupType}
-              onChange={(e) => setPickupType(e.target.value)}
-              className="p-2 border rounded-lg"
-            >
-              {pickupTypes.map(type => (
-                <option key={type} value={type}>{type.replace('_', ' ')}</option>
-              ))}
-            </select>
+            <p className="text-xs text-gray-600 mt-1">Number of volume controls (0-4)</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">Tone Knobs</label>
+            <input
+              type="number"
+              min="0"
+              max="4"
+              value={formData.toneKnobs}
+              onChange={(e) => setFormData(prev => ({ ...prev, toneKnobs: parseInt(e.target.value) || 0 }))}
+              className="w-full p-2 border rounded-lg"
+            />
+            <p className="text-xs text-gray-600 mt-1">Number of tone controls (0-4)</p>
+          </div>
+        </div>
+
+        {/* Coil Split */}
+        <div className="border rounded-lg p-4">
+          <h3 className="text-lg font-semibold mb-4">Coil Split Capabilities</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <label className="flex items-center">
               <input
                 type="checkbox"
-                checked={coilSplitCapable}
-                onChange={(e) => setCoilSplitCapable(e.target.checked)}
+                checked={formData.hasCoilSplitNeck}
+                onChange={(e) => setFormData(prev => ({ ...prev, hasCoilSplitNeck: e.target.checked }))}
                 className="mr-2"
               />
-              Coil Split Capable
+              Neck Pickup Coil Split
             </label>
-            <button
-              type="button"
-              onClick={addPickup}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-            >
-              Add Pickup
-            </button>
-          </div>
-
-          <div className="space-y-2">
-            {formData.pickups.map((pickup, index) => (
-              <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded">
-                <div className="flex items-center gap-4">
-                  <span className="font-medium">{pickup.id}</span>
-                  <span className="text-gray-600">{pickup.type}</span>
-                  {pickup.coilSplitCapable && (
-                    <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">Split</span>
-                  )}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => removePickup(pickup.id)}
-                  className="text-red-600 hover:text-red-800"
-                >
-                  Remove
-                </button>
-              </div>
-            ))}
+            <label className="flex items-center">
+              <input
+                type="checkbox"
+                checked={formData.hasCoilSplitBridge}
+                onChange={(e) => setFormData(prev => ({ ...prev, hasCoilSplitBridge: e.target.checked }))}
+                className="mr-2"
+              />
+              Bridge Pickup Coil Split
+            </label>
           </div>
         </div>
 
-        {/* Selector Section */}
+        {/* Knob Mapping (Optional) */}
         <div className="border rounded-lg p-4">
-          <h3 className="text-lg font-semibold mb-4">Selector</h3>
+          <h3 className="text-lg font-semibold mb-4">Knob Mapping (Optional)</h3>
           <p className="text-sm text-gray-600 mb-4">
-            Configure the pickup selector switch and its positions
+            For non-standard wiring (e.g., Strat tone to bridge). Leave empty for standard wiring.
           </p>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-2">Switch Type</label>
-              <select
-                value={formData.selector?.type || ''}
-                onChange={(e) => setFormData(prev => ({
-                  ...prev,
-                  selector: { ...prev.selector, type: e.target.value }
-                }))}
+              <label className="block text-sm font-medium mb-2">Tone 1</label>
+              <input
+                type="text"
+                value={knobMappingInputs.tone1}
+                onChange={(e) => setKnobMappingInputs(prev => ({ ...prev, tone1: e.target.value }))}
                 className="w-full p-2 border rounded-lg"
-              >
-                <option value="">Select switch type</option>
-                {selectorTypes.map(type => (
-                  <option key={type} value={type}>{getSelectorTypeLabel(type)}</option>
-                ))}
-              </select>
+                placeholder="e.g., neck"
+              />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">Coil Split Control</label>
-              <select
-                value={formData.selector?.coilSplitControl || 'none'}
-                onChange={(e) => setFormData(prev => ({
-                  ...prev,
-                  selector: { ...prev.selector, coilSplitControl: e.target.value }
-                }))}
+              <label className="block text-sm font-medium mb-2">Tone 2</label>
+              <input
+                type="text"
+                value={knobMappingInputs.tone2}
+                onChange={(e) => setKnobMappingInputs(prev => ({ ...prev, tone2: e.target.value }))}
                 className="w-full p-2 border rounded-lg"
-              >
-                <option value="none">None</option>
-                <option value="global_push_pull">Global Push/Pull</option>
-                <option value="per_pickup_push_pull">Per Pickup Push/Pull</option>
-              </select>
+                placeholder="e.g., middle"
+              />
             </div>
-          </div>
-
-          <div className="space-y-2">
-            {formData.selector?.positions?.map((position, index) => (
-              <div key={index} className="p-3 bg-gray-50 rounded">
-                <div className="flex items-center gap-4 mb-2">
-                  <span className="font-medium">{position.name}</span>
-                  <span className="text-gray-600">{position.label}</span>
-                </div>
-                <div className="text-sm text-gray-600">
-                  Active: {position.active.map(a => `${a.pickupId}${a.split ? ' (split)' : ''}`).join(', ')}
-                </div>
-              </div>
-            ))}
+            <div>
+              <label className="block text-sm font-medium mb-2">Volume 1</label>
+              <input
+                type="text"
+                value={knobMappingInputs.volume1}
+                onChange={(e) => setKnobMappingInputs(prev => ({ ...prev, volume1: e.target.value }))}
+                className="w-full p-2 border rounded-lg"
+                placeholder="e.g., master"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Volume 2</label>
+              <input
+                type="text"
+                value={knobMappingInputs.volume2}
+                onChange={(e) => setKnobMappingInputs(prev => ({ ...prev, volume2: e.target.value }))}
+                className="w-full p-2 border rounded-lg"
+                placeholder="e.g., bridge"
+              />
+            </div>
           </div>
         </div>
 
-        {/* Controls Section */}
-        <div className="border rounded-lg p-4">
-          <h3 className="text-lg font-semibold mb-4">Controls</h3>
-          <p className="text-sm text-gray-600 mb-4">
-            Configure volume and tone controls for this guitar
-          </p>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={formData.controls?.masterVolume || false}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    controls: { ...prev.controls, masterVolume: e.target.checked }
-                  }))}
-                  className="mr-2"
-                />
-                Master Volume
-              </label>
-            </div>
-            <div>
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={formData.controls?.masterTone || false}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    controls: { ...prev.controls, masterTone: e.target.checked }
-                  }))}
-                  className="mr-2"
-                />
-                Master Tone
-              </label>
-            </div>
-          </div>
+        {/* Notes */}
+        <div>
+          <label className="block text-sm font-medium mb-2">Notes (Optional)</label>
+          <textarea
+            value={formData.notes}
+            onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+            className="w-full p-2 border rounded-lg"
+            rows={3}
+            placeholder="Additional notes about this guitar..."
+          />
         </div>
 
         {/* Form Actions */}

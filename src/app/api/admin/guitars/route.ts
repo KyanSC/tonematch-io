@@ -1,67 +1,77 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/database'
 
+// Helper function to validate and prepare guitar data
+function validateGuitarData(formData: any) {
+  const { 
+    brand, 
+    model, 
+    pickupLayout, 
+    positions, 
+    volumeKnobs, 
+    toneKnobs, 
+    hasCoilSplitNeck, 
+    hasCoilSplitBridge, 
+    knobMapping, 
+    notes 
+  } = formData
+
+  // Validation
+  if (!brand || !model || !pickupLayout) {
+    throw new Error('Brand, model, and pickup layout are required')
+  }
+
+  if (!Array.isArray(positions) || positions.length === 0) {
+    throw new Error('At least one pickup position must be selected')
+  }
+
+  if (typeof volumeKnobs !== 'number' || volumeKnobs < 0 || volumeKnobs > 4) {
+    throw new Error('Volume knobs must be a number between 0 and 4')
+  }
+
+  if (typeof toneKnobs !== 'number' || toneKnobs < 0 || toneKnobs > 4) {
+    throw new Error('Tone knobs must be a number between 0 and 4')
+  }
+
+  // Validate positions are canonical tokens
+  const validPositions = ['NECK', 'NECK_MIDDLE', 'MIDDLE', 'MIDDLE_BRIDGE', 'BRIDGE', 'NECK_BRIDGE']
+  for (const position of positions) {
+    if (!validPositions.includes(position)) {
+      throw new Error(`Invalid position: ${position}`)
+    }
+  }
+
+  return {
+    brand,
+    model,
+    pickupLayout,
+    positions,
+    volumeKnobs,
+    toneKnobs,
+    hasCoilSplitNeck: Boolean(hasCoilSplitNeck),
+    hasCoilSplitBridge: Boolean(hasCoilSplitBridge),
+    knobMapping: knobMapping && Object.keys(knobMapping).length > 0 ? knobMapping : null,
+    notes: notes || null
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { 
-      brand, 
-      model, 
-      pickupTypeEnum, 
-      pickupSwitchOptions, 
-      volumeKnobs, 
-      toneKnobs, 
-      otherControls,
-      // New structured fields
-      pickups,
-      selector,
-      controls,
-      layoutCode
-    } = body
 
-    // Validation
-    if (!brand || !model) {
-      return NextResponse.json(
-        { error: 'Brand and model are required' },
-        { status: 400 }
-      )
-    }
-
-    // Validate enum values
-    const validPickupTypes = ['single_coil', 'humbucker', 'p90', 'other']
-    if (pickupTypeEnum && !validPickupTypes.includes(pickupTypeEnum)) {
-      return NextResponse.json(
-        { error: 'Invalid pickup type' },
-        { status: 400 }
-      )
-    }
+    // Validate and prepare guitar data
+    const guitarData = validateGuitarData(body)
 
     const guitar = await prisma.guitar.create({
-      data: {
-        brand,
-        model,
-        pickupTypeEnum: pickupTypeEnum || null,
-        pickupSwitchOptions: pickupSwitchOptions || null,
-        volumeKnobs: volumeKnobs || null,
-        toneKnobs: toneKnobs || null,
-        otherControls: otherControls || null,
-        // New structured fields
-        pickups: pickups || null,
-        selector: selector || null,
-        controls: controls || null,
-        layoutCode: layoutCode || null,
-        // Keep legacy fields for backward compatibility
-        pickupType: pickupTypeEnum || null,
-        toneControls: (volumeKnobs || 0) + (toneKnobs || 0)
-      }
+      data: guitarData
     })
 
     return NextResponse.json(guitar)
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating guitar:', error)
     return NextResponse.json(
-      { error: 'Failed to create guitar' },
-      { status: 500 }
+      { error: error.message || 'Failed to create guitar' },
+      { status: 400 }
     )
   }
 } 

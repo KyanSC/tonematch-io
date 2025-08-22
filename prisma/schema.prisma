@@ -1,9 +1,6 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -13,143 +10,204 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum PickupType {
-  single_coil
-  humbucker
-  p90
-  other
-}
-
-enum LayoutPreset {
-  SSS_5WAY
-  HSS_5WAY
-  HSH_5WAY
-  HH_3WAY
-  HH_5WAY
-  CUSTOM
-}
-
-enum AmpFamily {
-  fender
-  marshall
-  vox
-  boss
-  blackstar
-  orange
-  peavey
-  line6
-  modeling
-  solid_state
-  other
-}
-
-enum SongSection {
-  INTRO
-  VERSE
-  CHORUS
-  BRIDGE
-  SOLO
-  OUTRO
-  BREAKDOWN
-}
-
 model Guitar {
-  id                  String   @id @default(cuid())
-  brand               String
-  model               String
-  pickupType          String?  // Legacy field - keeping for existing data
-  toneControls        Int?     // Legacy field - keeping for existing data
-  // New detailed fields
-  pickupTypeEnum      PickupType?
-  pickupSwitchOptions Json?    // ["neck", "middle", "bridge", "neck+middle", "bridge+middle"]
-  volumeKnobs         Int?
-  toneKnobs           Int?
-  otherControls       Json?    // {"coil_split": true, "kill_switch": false}
-  // New multi-pickup layout fields
-  layoutPreset        LayoutPreset?
-  pickupLayout        Json?    // array of pickups with objects like { positionLabel: "neck|middle|bridge", type: "single_coil|humbucker|p90", hasCoilSplit: boolean }
-  switchPositions     Json?    // ordered list of positions; each item like { name: "1|2|3|4|5|Up|Middle|Down", activePickups: ["neck","middle"], coilSplitOverrides?: { bridge: true } }
-  controls            Json?    // { volumeKnobs: number, toneKnobs: number, knobAssignment?: { neck?: { volumeIndex: number, toneIndex: number }, bridge?: {...}, middle?: {...} } }
-  // New structured fields for better organization
-  layoutCode          String?  // derived tag like "SSS", "HSS", "HH", "HSH" (computed and stored for search/display)
-  pickups             Json?    // array of objects, one per physical pickup: [{ "id": "neck", "type": "single_coil|humbucker|p90|filtertron|mini_humbucker|lipstick|gold_foil|other", "coilSplitCapable": true|false }]
-  selector            Json?    // structure describing the switch hardware and the effective positions it offers
-  createdAt           DateTime @default(now())
-  gearMatches         GearMatch[]
-  tones               Tone[]
+  id                 String   @id @default(cuid())
+  brand              String
+  model              String
+
+  // Matching-critical structure
+  pickupLayout       String          // "HH" | "SSS" | "HSS" | "P90_P90" | "HSH" | ...
+  positions          String[]        // ordered canonical tokens: NECK, NECK_MIDDLE, MIDDLE, MIDDLE_BRIDGE, BRIDGE, NECK_BRIDGE
+  volumeKnobs        Int
+  toneKnobs          Int
+
+  // Only when wiring is non-standard (e.g., Strat tone to bridge)
+  knobMapping        Json?           // {"tone1":"neck","tone2":"middle","volume1":"master"} (optional)
+
+  // Pickup features
+  hasCoilSplitNeck   Boolean @default(false)
+  hasCoilSplitBridge Boolean @default(false)
+
+  notes              String?
+
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 }
 
 model Amp {
-  id            String   @id @default(cuid())
-  brand         String
-  model         String
-  ampType       String?  // Legacy field - keeping for existing data
-  hasReverb     Boolean? // Legacy field - keeping for existing data
-  channels      Int?     // Legacy field - keeping for existing data
-  controls      Json?    // Legacy field - keeping for existing data
-  // New detailed fields
-  ampFamily     AmpFamily?
-  isTube        Boolean?
-  knobs         Json?    // {"gain": 10, "bass": 10, "treble": 10, "mids": 10, "reverb": 10}
-  channelsArray Json?    // ["clean", "drive"]
-  otherFeatures Json?    // {"effects_loop": true, "footswitch": true}
-  // New structured fields for exact front-panel controls
-  channelsList  Json?    // ordered list of channel names as labeled on panel/manual
-  controlsList  Json?    // ordered array of front-panel knobs with exact labels
-  buttons       Json?    // ordered array of labeled buttons/toggles/switches
-  voicings      Json?    // ordered names exactly as on product/manual
-  powerSection  Json?    // optional details: { "wattage": <number>, "tubeTypes": ["EL84", ...] }
-  createdAt     DateTime @default(now())
-  gearMatches   GearMatch[]
-  tones         Tone[]
+  id               String   @id @default(cuid())
+  brand            String
+  model            String
+
+  // Core capability flags (algorithm uses these directly)
+  hasGain          Boolean @default(false)
+  hasVolume        Boolean @default(true)
+  hasBass          Boolean @default(true)
+  hasMid           Boolean @default(true)
+  hasTreble        Boolean @default(true)
+  hasPresence      Boolean @default(false)
+  hasReverb        Boolean @default(false)
+  hasDriveChannel  Boolean @default(false)
+
+  // Extended capability flags (explicit columns; keep it under ~20)
+  hasBright        Boolean @default(false)
+  hasToneCut       Boolean @default(false)   // Vox-style cut
+  hasDepth         Boolean @default(false)   // Resonant low-end depth
+  hasResonance     Boolean @default(false)   // Marshall-style resonance
+  hasMasterVolume  Boolean @default(false)
+  hasPreampGain    Boolean @default(false)
+  hasFXLoopLevel   Boolean @default(false)
+  hasContour       Boolean @default(false)
+  hasGraphicEQ     Boolean @default(false)
+  hasBoost         Boolean @default(false)
+  hasPowerScale    Boolean @default(false)
+  hasNoiseGate     Boolean @default(false)
+
+  channels         String?                 // "single" | "two" | "multi" (optional)
+  controlsExtra    Json?                   // true oddballs go here later
+
+  notes            String?
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }
 
 model Song {
   id        String   @id @default(cuid())
   title     String
   artist    String
-  genre     String?
   year      Int?
+
   tones     Tone[]
+
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([title, artist])
+}
+
+model GuitarArchetype {
+  id                String   @id @default(cuid())
+  name              String   @unique
+  brand             String?
+  pickupLayout      String   // e.g., HH, HSS, SSS, P90
+  switchPositions   Json     // list of positions (Strat 5-way, LP 3-way, etc.)
+  volumeKnobs       Int      // number of volume knobs
+  toneKnobs         Int      // number of tone knobs
+  perPickupControls Boolean  // true if LP style
+  coilSplit         Boolean  // supports coil split
+  otherSwitches     Json?    // phase, series/parallel, S1, etc.
+  notes             String?
+  systemLocked      Boolean  @default(false) // For migration placeholders
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  tones Tone[]
+}
+
+model AmpArchetype {
+  id              String   @id @default(cuid())
+  name            String   @unique
+  brand           String?
+  topology        String?  // e.g., combo, head, digital, etc.
+  channels        Json     // array: Clean, Crunch, Lead, etc.
+  controls        Json     // array of knob definitions: { name: "Gain", min: 0, max: 10, default: 5 }
+  hasPresence     Boolean
+  hasReverb       Boolean
+  hasMasterVolume Boolean
+  hasFXLoop       Boolean
+  notes           String?
+  systemLocked    Boolean  @default(false) // For migration placeholders
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  tones Tone[]
 }
 
 model Tone {
-  id            String         @id @default(cuid())
-  songId        String
-  name          String
-  description   String?
-  difficulty    String         // "beginner", "intermediate", "advanced" - keeping existing field
-  baseSettings  Json           // keeping existing field
-  // New tone authoring fields
-  baseGuitarId  String?
-  baseAmpId     String?
-  baseGuitar    Guitar?        @relation(fields: [baseGuitarId], references: [id])
-  baseAmp       Amp?           @relation(fields: [baseAmpId], references: [id])
-  // Guitar position/voice at authoring time
-  referencePickupPosition String?  // e.g., "5", "2", "Neck", "Middle", "Bridge", "Up/Down"
-  referencePickupVoice    Json?    // { active: [{ pickupId, type, split }], blend?: "series"|"parallel"|"n/a" }
-  // Base amp settings (must match the baseAmp.controlsList names; values 0–10)
-  songSection   SongSection?
-  confidence    Int              @default(70) // 0–100
-  // Provenance & verification
-  sourceLinks   Json?            // string[]
-  verified      Boolean          @default(false)
-  verificationNotes String?
-  // Existing relations
-  song          Song             @relation(fields: [songId], references: [id])
-  gearMatches   GearMatch[]
-  createdAt     DateTime         @default(now())
+  id        String   @id @default(cuid())
+  songId    String
+  song      Song     @relation(fields: [songId], references: [id])
+
+  // Multiple tones per song:
+  name      String        // "Intro Clean", "Don Felder Solo", etc.
+  slug      String        // "hotel-california-felder-solo"
+  role      ToneRole?     // optional filter
+  section   String?       // "intro" | "verse" | "chorus" | "solo 1"
+  guitarist String?       // "Don Felder" (optional)
+  confidence String?      // "HIGH" | "MEDIUM" | "LOW"
+
+  // Required Archetypes (new)
+  sourceGuitarArchetypeId String
+  sourceGuitarArchetype   GuitarArchetype @relation(fields: [sourceGuitarArchetypeId], references: [id])
+  sourceAmpArchetypeId    String
+  sourceAmpArchetype      AmpArchetype @relation(fields: [sourceAmpArchetypeId], references: [id])
+
+  // Source Gear (original rig) - all optional for backward compatibility
+  instrument        Instrument?     // GUITAR | BASS
+  sourceGuitar      String?         // "Les Paul Standard" (secondary notes)
+  sourcePickup      String?         // "bridge" | "neck" | "middle"
+  sourcePickupType  PickupType?     // SINGLE_COIL | HUMBUCKER | P90 | OTHER
+  
+  // Original Guitar Settings
+  sourcePickupSelector String?      // "Neck" | "Neck+Middle" | "Middle" | "Middle+Bridge" | "Bridge" | "Neck+Bridge" | "All/Other"
+  sourceGuitarVolume   Int?         // 0-10 (single knob - deprecated, use per-pickup)
+  sourceGuitarTone     Int?         // 0-10 (single knob - deprecated, use per-pickup)
+  sourceGuitarVolumeNeck   Int?     // 0-10 (per-pickup)
+  sourceGuitarVolumeBridge Int?     // 0-10 (per-pickup)
+  sourceGuitarToneNeck     Int?     // 0-10 (per-pickup)
+  sourceGuitarToneBridge   Int?     // 0-10 (per-pickup)
+  sourceCoilSplit      String?      // "None" | "Neck" | "Bridge" | "Both"
+  sourceOtherSwitches  String?      // "phase reverse on, series mode"
+  
+  sourceAmp         String?         // "Marshall JCM800" (secondary notes)
+  sourceAmpChannel  String?         // "lead" | "clean" | "crunch" (deprecated, use structured)
+  sourceAmpChannelStructured AmpChannel? // CLEAN | CRUNCH | LEAD_HIGH_GAIN | ACOUSTIC_JC | OTHER
+  sourceAmpChannelOther String?     // free text when OTHER is selected
+  sourcePedals      String?         // "Tube Screamer, Big Muff"
+  sourceNotes       String?         // "Recorded with vintage tubes"
+  
+  // Original Amp Settings (Recorded)
+  sourceAmpMasterVolume    Int?     // 0-10
+  sourceAmpChannelVolume   Int?     // 0-10
+  sourceAmpExtras          Json?    // Advanced amp controls as JSON array
+
+  // The authoring payload we adapt to user gear:
+  intent    Json          // { pickupTarget, gain, eq{bass,mid,treble}, presence?, reverb?, delay?, ... }
+  notes     String?       // human guidance (optional)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([songId, slug])
 }
 
-model GearMatch {
-  id       String   @id @default(cuid())
-  toneId   String
-  guitarId String?
-  ampId    String?
-  settings Json
-  tone     Tone     @relation(fields: [toneId], references: [id])
-  guitar   Guitar?  @relation(fields: [guitarId], references: [id])
-  amp      Amp?     @relation(fields: [ampId], references: [id])
-  createdAt DateTime @default(now())
+enum Instrument {
+  GUITAR
+  BASS
+}
+
+enum PickupType {
+  SINGLE_COIL
+  HUMBUCKER
+  P90
+  OTHER
+}
+
+enum AmpChannel {
+  CLEAN
+  CRUNCH
+  LEAD_HIGH_GAIN
+  ACOUSTIC_JC
+  OTHER
+}
+
+enum ToneRole {
+  CLEAN
+  RHYTHM
+  CRUNCH
+  LEAD
+  SOLO
 }

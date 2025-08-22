@@ -1,197 +1,94 @@
 [
   {
+    "id": "fender-bullet-reverb",
     "brand": "Fender",
-    "model": "Champion 20",
-    "ampType": null,
-    "hasReverb": null,
-    "channels": null,
-    "controls": null,
-    "ampFamily": null,
-    "isTube": null,
-    "knobs": null,
-    "channelsArray": null,
-    "otherFeatures": null
+    "model": "Bullet Reverb",
+    "channels": ["normal","drive"],
+    "controls": ["volume","gain","drive-volume","treble","middle","bass","reverb"]
   },
   {
+    "id": "fender-65-twin-reverb",
     "brand": "Fender",
-    "model": "Mustang LT25",
-    "ampType": null,
-    "hasReverb": null,
-    "channels": null,
-    "controls": null,
-    "ampFamily": null,
-    "isTube": null,
-    "knobs": null,
-    "channelsArray": null,
-    "otherFeatures": null
+    "model": "'65 Twin Reverb Reissue",
+    "channels": ["normal","vibrato"],
+    "controls": [
+      "normal-bright-switch","normal-volume","normal-treble","normal-middle","normal-bass",
+      "vibrato-bright-switch","vibrato-volume","vibrato-treble","vibrato-middle","vibrato-bass",
+      "reverb","speed","intensity","presence"
+    ]
   },
   {
-    "brand": "Fender",
-    "model": "Blues Junior IV",
-    "ampType": null,
-    "hasReverb": null,
-    "channels": null,
-    "controls": null,
-    "ampFamily": null,
-    "isTube": null,
-    "knobs": null,
-    "channelsArray": null,
-    "otherFeatures": null
-  },
-  {
-    "brand": "Fender",
-    "model": "Twin Reverb",
-    "ampType": null,
-    "hasReverb": null,
-    "channels": null,
-    "controls": null,
-    "ampFamily": null,
-    "isTube": null,
-    "knobs": null,
-    "channelsArray": null,
-    "otherFeatures": null
-  },
-  {
-    "brand": "Marshall",
-    "model": "MG30GFX",
-    "ampType": null,
-    "hasReverb": null,
-    "channels": null,
-    "controls": null,
-    "ampFamily": null,
-    "isTube": null,
-    "knobs": null,
-    "channelsArray": null,
-    "otherFeatures": null
-  },
-  {
-    "brand": "Marshall",
-    "model": "DSL40CR",
-    "ampType": null,
-    "hasReverb": null,
-    "channels": null,
-    "controls": null,
-    "ampFamily": null,
-    "isTube": null,
-    "knobs": null,
-    "channelsArray": null,
-    "otherFeatures": null
-  },
-  {
-    "brand": "Marshall",
-    "model": "Code 50",
-    "ampType": null,
-    "hasReverb": null,
-    "channels": null,
-    "controls": null,
-    "ampFamily": null,
-    "isTube": null,
-    "knobs": null,
-    "channelsArray": null,
-    "otherFeatures": null
-  },
-  {
-    "brand": "Boss",
-    "model": "Katana 50 MkII",
-    "ampType": null,
-    "hasReverb": null,
-    "channels": null,
-    "controls": null,
-    "ampFamily": null,
-    "isTube": null,
-    "knobs": null,
-    "channelsArray": null,
-    "otherFeatures": null
-  },
-  {
-    "brand": "Blackstar",
-    "model": "ID:Core 20 V3",
-    "ampType": null,
-    "hasReverb": null,
-    "channels": null,
-    "controls": null,
-    "ampFamily": null,
-    "isTube": null,
-    "knobs": null,
-    "channelsArray": null,
-    "otherFeatures": null
-  },
-  {
-    "brand": "Blackstar",
-    "model": "HT-1R MkII",
-    "ampType": null,
-    "hasReverb": null,
-    "channels": null,
-    "controls": null,
-    "ampFamily": null,
-    "isTube": null,
-    "knobs": null,
-    "channelsArray": null,
-    "otherFeatures": null
-  },
-  {
+    "id": "vox-ac15c1",
     "brand": "Vox",
     "model": "AC15C1",
-    "ampType": null,
-    "hasReverb": null,
-    "channels": null,
-    "controls": null,
-    "ampFamily": null,
-    "isTube": null,
-    "knobs": null,
-    "channelsArray": null,
-    "otherFeatures": null
+    "channels": ["normal","top-boost"],
+    "controls": [
+      "normal-volume",
+      "top-boost-volume","top-boost-treble","top-boost-bass",
+      "master-volume","tone-cut",
+      "reverb","tremolo-speed","tremolo-depth"
+    ]
   },
   {
+    "id": "vox-ac30c2",
     "brand": "Vox",
     "model": "AC30C2",
-    "ampType": null,
-    "hasReverb": null,
-    "channels": null,
-    "controls": null,
-    "ampFamily": null,
-    "isTube": null,
-    "knobs": null,
-    "channelsArray": null,
-    "otherFeatures": null
+    "channels": ["normal","top-boost"],
+    "controls": [
+      "normal-volume",
+      "top-boost-volume","top-boost-treble","top-boost-bass",
+      "master-volume","tone-cut",
+      "reverb","tremolo-speed","tremolo-depth"
+    ]
   },
   {
+    "id": "marshall-jcm800-2203",
+    "brand": "Marshall",
+    "model": "JCM800 2203",
+    "channels": ["lead"],
+    "controls": ["preamp-gain","master-volume","bass","middle","treble","presence"]
+  },
+  {
+    "id": "marshall-dsl40c",
+    "brand": "Marshall",
+    "model": "DSL40C",
+    "channels": ["clean","crunch","od1","od2"],
+    "controls": [
+      "clean-gain","clean-volume",
+      "crunch-gain","crunch-volume",
+      "od1-gain","od1-volume",
+      "od2-gain","od2-volume",
+      "bass","middle","treble","presence","resonance",
+      "reverb","master-volume"
+    ]
+  },
+  {
+    "id": "orange-rocker-32",
     "brand": "Orange",
-    "model": "Crush 20RT",
-    "ampType": null,
-    "hasReverb": null,
-    "channels": null,
-    "controls": null,
-    "ampFamily": null,
-    "isTube": null,
-    "knobs": null,
-    "channelsArray": null,
-    "otherFeatures": null
+    "model": "Rocker 32",
+    "channels": ["natural","dirty"],
+    "controls": [
+      "natural-volume",
+      "dirty-gain","dirty-volume","dirty-bass","dirty-middle","dirty-treble",
+      "fx-loop-level"
+    ]
   },
   {
-    "brand": "Peavey",
-    "model": "Bandit 112",
-    "ampType": null,
-    "hasReverb": null,
-    "channels": null,
-    "controls": null,
-    "ampFamily": null,
-    "isTube": null,
-    "knobs": null,
-    "channelsArray": null,
-    "otherFeatures": null
+    "id": "fender-blues-junior-iv",
+    "brand": "Fender",
+    "model": "Blues Junior IV",
+    "channels": ["clean"],
+    "controls": ["volume","fat-switch","treble","middle","bass","master","reverb"]
   },
   {
-    "brand": "Line 6",
-    "model": "Spider V 60 MkII",
-    "ampType": null,
-    "hasReverb": null,
-    "channels": null,
-    "controls": null,
-    "ampFamily": null,
-    "isTube": null,
-    "knobs": null,
-    "channelsArray": null,
-    "otherFeatures": null
+    "id": "fender-65-deluxe-reverb",
+    "brand": "Fender",
+    "model": "'65 Deluxe Reverb",
+    "channels": ["normal","vibrato"],
+    "controls": [
+      "normal-volume","normal-treble","normal-bass",
+      "vibrato-volume","vibrato-treble","vibrato-bass",
+      "reverb","speed","intensity"
+    ]
   }
 ] 
